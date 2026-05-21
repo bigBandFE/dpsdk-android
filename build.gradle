@@ -1,0 +1,113 @@
+plugins {
+    id 'base'
+    id 'maven-publish'
+}
+
+group = findProperty("POM_GROUP_ID") ?: "com.github.bigBandFE"
+
+def rawVersion = (findProperty("SDK_VERSION")
+        ?: System.getenv("SDK_VERSION")
+        ?: System.getenv("VERSION")
+        ?: "1.0.0").toString()
+def sdkVersion = rawVersion.startsWith("v") ? rawVersion.substring(1) : rawVersion
+def releaseTag = rawVersion.startsWith("v") ? rawVersion : "v${sdkVersion}"
+def artifactIdValue = (findProperty("POM_ARTIFACT_ID") ?: "dpsdk").toString()
+def githubRepo = (findProperty("GITHUB_REPO") ?: "bigBandFE/dpsdk-android").toString()
+def aarBaseName = (findProperty("AAR_BASE_NAME") ?: "dpsdk").toString()
+def aarFileName = "${aarBaseName}-${sdkVersion}.aar"
+def aarDownloadUrl = (findProperty("AAR_URL")
+        ?: "https://github.com/${githubRepo}/releases/download/${releaseTag}/${aarFileName}").toString()
+def runtimeDeps = [
+        // Derived from the current dpweb releaseRuntimeClasspath in the source workspace.
+        [group: "androidx.appcompat", name: "appcompat", version: "1.7.0"],
+        [group: "com.google.android.material", name: "material", version: "1.12.0"],
+        [group: "androidx.constraintlayout", name: "constraintlayout", version: "2.1.4"],
+        [group: "com.github.bumptech.glide", name: "glide", version: "4.12.0"],
+        [group: "org.jetbrains.kotlin", name: "kotlin-stdlib", version: "2.1.21"],
+        [group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk7", version: "2.1.21"],
+        [group: "org.jetbrains.kotlin", name: "kotlin-parcelize-runtime", version: "2.1.21"],
+        [group: "androidx.core", name: "core-ktx", version: "1.13.1"],
+        [group: "androidx.lifecycle", name: "lifecycle-runtime-ktx", version: "2.8.0"],
+        [group: "com.geyifeng.immersionbar", name: "immersionbar", version: "3.2.0"],
+        [group: "com.squareup.okhttp3", name: "okhttp", version: "4.12.0"],
+        [group: "com.tencent", name: "mmkv", version: "2.4.0"],
+        [group: "com.google.code.gson", name: "gson", version: "2.11.0"],
+        [group: "com.google.android.gms", name: "play-services-location", version: "21.0.1"],
+]
+
+version = sdkVersion
+
+def downloadedAar = layout.buildDirectory.file("downloads/${aarFileName}")
+
+tasks.register("downloadAar") {
+    description = "Download the prebuilt closed-source AAR from GitHub Releases."
+    outputs.file(downloadedAar)
+
+    doLast {
+        def outputFile = downloadedAar.get().asFile
+        outputFile.parentFile.mkdirs()
+
+        logger.lifecycle("Downloading ${aarDownloadUrl}")
+        ant.get(src: aarDownloadUrl, dest: outputFile, skipexisting: false, verbose: true)
+
+        if (!outputFile.exists() || outputFile.length() == 0L) {
+            throw new GradleException("Failed to download AAR from ${aarDownloadUrl}")
+        }
+    }
+}
+
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = project.group.toString()
+            artifactId = artifactIdValue
+            version = project.version.toString()
+
+            artifact(downloadedAar) {
+                builtBy(tasks.named("downloadAar"))
+                extension = "aar"
+            }
+
+            pom {
+                name = artifactIdValue
+                description = "Closed-source DPSDK Android AAR distributed through JitPack"
+                packaging = "aar"
+            }
+
+            pom.withXml {
+                if (runtimeDeps.isEmpty()) {
+                    return
+                }
+
+                def dependenciesNode = asNode().appendNode("dependencies")
+                runtimeDeps.each { dep ->
+                    def dependencyNode = dependenciesNode.appendNode("dependency")
+                    dependencyNode.appendNode("groupId", dep.group)
+                    dependencyNode.appendNode("artifactId", dep.name)
+                    dependencyNode.appendNode("version", dep.version)
+                    dependencyNode.appendNode("scope", dep.scope ?: "runtime")
+                }
+            }
+        }
+    }
+}
+
+tasks.withType(PublishToMavenRepository).configureEach {
+    dependsOn(tasks.named("downloadAar"))
+}
+
+tasks.withType(PublishToMavenLocal).configureEach {
+    dependsOn(tasks.named("downloadAar"))
+}
+
+tasks.register("printReleaseInfo") {
+    description = "Print the resolved release metadata for debugging JitPack builds."
+    doLast {
+        logger.lifecycle("groupId      : ${project.group}")
+        logger.lifecycle("artifactId   : ${artifactIdValue}")
+        logger.lifecycle("version      : ${project.version}")
+        logger.lifecycle("releaseTag   : ${releaseTag}")
+        logger.lifecycle("aarFileName  : ${aarFileName}")
+        logger.lifecycle("aarDownloadUrl: ${aarDownloadUrl}")
+    }
+}

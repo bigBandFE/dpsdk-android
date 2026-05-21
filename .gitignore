@@ -2,4 +2,6 @@
 build/
 out/
 tmp/
+.idea/
 README.md
+README.local.md

@@ -9,7 +9,7 @@ Usage:
 
 Examples:
   ./scripts/release_aar.sh 1.0.0 /path/to/dpsdk-1.0.0.aar
-  ./scripts/release_aar.sh v1.0.0 /path/to/output.aar bigBandFE/dpsdk-android
+  ./scripts/release_aar.sh 2.0.0 /path/to/output.aar bigBandFE/dpsdk-android
 
 Environment overrides:
   GITHUB_REPO     GitHub repo slug, default: bigBandFE/dpsdk-android
@@ -52,7 +52,7 @@ if [[ ! -f "$input_aar" ]]; then
 fi
 
 version="${raw_version#v}"
-tag="v${version}"
+tag="${version}"
 asset_name="${aar_base_name}-${version}.aar"
 
 tmp_dir="$(mktemp -d)"

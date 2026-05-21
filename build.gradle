@@ -10,7 +10,9 @@ def rawVersion = (findProperty("SDK_VERSION")
         ?: System.getenv("VERSION")
         ?: "1.0.0").toString()
 def sdkVersion = rawVersion.startsWith("v") ? rawVersion.substring(1) : rawVersion
-def releaseTag = rawVersion.startsWith("v") ? rawVersion : "v${sdkVersion}"
+def releaseTag = (findProperty("RELEASE_TAG")
+        ?: System.getenv("RELEASE_TAG")
+        ?: rawVersion).toString()
 def artifactIdValue = (findProperty("POM_ARTIFACT_ID") ?: "dpsdk").toString()
 def githubRepo = (findProperty("GITHUB_REPO") ?: "bigBandFE/dpsdk-android").toString()
 def aarBaseName = (findProperty("AAR_BASE_NAME") ?: "dpsdk").toString()

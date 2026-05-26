@@ -64,10 +64,6 @@ class MyApplication : Application() {
         DPSDK.init(this).setDPSdkConfig(
             DPSDKConfig.Builder()
                 .setClientId("<client_id>")
-                .setIsLog(BuildConfig.DEBUG)
-                .setDebug(BuildConfig.DEBUG)
-                .setLanguage("en-US")
-                .setEnv(DPSDK.Env.UAT)
                 .build()
         )
     }

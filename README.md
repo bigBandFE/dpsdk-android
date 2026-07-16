@@ -134,3 +134,4 @@ DPSDK.getDPApp(appId)
 - WebView or JSBridge callback issues: register custom event handlers before opening the DPApp.
 
 For setup support, open a request through [Contact Us](https://github.com/bigBandFE/dpsdk-contact/).
+
